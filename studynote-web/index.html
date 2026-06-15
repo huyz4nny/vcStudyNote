@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyNote — Quản lý học tập</title>
+  <meta name="description"
+    content="Ứng dụng ghi chú môn học, theo dõi deadline và quản lý checklist hàng ngày cho sinh viên." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1/src/index.js"></script>
+  <link rel="stylesheet" href="css/redesign.css" />
+</head>
+
+<body>
+
+  <!-- ══════════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════════ -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <rect width="40" height="40" rx="10" fill="#10b981" />
+          <path d="M10 14h20M10 20h14M10 26h16" stroke="white" stroke-width="2.5" stroke-linecap="round" />
+        </svg>
+        <span>StudyNote</span>
+      </div>
+
+      <!-- Tabs -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tabLogin" role="tab" aria-selected="true" aria-controls="panelLogin"
+          onclick="switchAuthTab('login')">Đăng nhập</button>
+        <button class="auth-tab" id="tabRegister" role="tab" aria-selected="false" aria-controls="panelRegister"
+          onclick="switchAuthTab('register')">Tạo tài khoản</button>
+      </div>
+
+      <!-- Login panel -->
+      <div id="panelLogin" role="tabpanel" aria-labelledby="tabLogin">
+        <form id="loginForm" onsubmit="doLogin(event)" novalidate>
+          <div class="auth-field">
+            <label class="auth-label" for="loginUser">Tên đăng nhập</label>
+            <input id="loginUser" type="text" class="auth-input" placeholder="username" autocomplete="username"
+              required />
+          </div>
+          <div class="auth-field">
+            <label class="auth-label" for="loginPass">Mật khẩu</label>
+            <div class="auth-pass-wrap">
+              <input id="loginPass" type="password" class="auth-input" placeholder="••••••"
+                autocomplete="current-password" required />
+              <button type="button" class="auth-eye" onclick="togglePassVis('loginPass', this)"
+                aria-label="Hiện mật khẩu">
+                <i class="ph ph-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div id="loginError" class="auth-error" role="alert" aria-live="polite"></div>
+          <button type="submit" class="btn-primary auth-submit">Đăng nhập</button>
+          <p class="auth-hint">Dùng demo: <code>demo</code> / <code>demo123</code></p>
+        </form>
+      </div>
+
+      <!-- Register panel -->
+      <div id="panelRegister" role="tabpanel" aria-labelledby="tabRegister" hidden>
+        <form id="registerForm" onsubmit="doRegister(event)" novalidate>
+          <div class="form-grid-2">
+            <div class="auth-field">
+              <label class="auth-label" for="regUser">Tên đăng nhập <span class="req">*</span></label>
+              <input id="regUser" type="text" class="auth-input" placeholder="VD: nguyenvan" autocomplete="username"
+                required />
+            </div>
+            <div class="auth-field">
+              <label class="auth-label" for="regDisplay">Họ tên hiển thị <span class="req">*</span></label>
+              <input id="regDisplay" type="text" class="auth-input" placeholder="Nguyễn Văn A" autocomplete="name"
+                required />
+            </div>
+          </div>
+          <div class="auth-field">
+            <label class="auth-label" for="regUni">Trường / Khoa</label>
+            <input id="regUni" type="text" class="auth-input" placeholder="FPT University"
+              autocomplete="organization" />
+          </div>
+          <div class="form-grid-2">
+            <div class="auth-field">
+              <label class="auth-label" for="regPass">Mật khẩu <span class="req">*</span></label>
+              <div class="auth-pass-wrap">
+                <input id="regPass" type="password" class="auth-input" placeholder="≥6 ký tự"
+                  autocomplete="new-password" required />
+                <button type="button" class="auth-eye" onclick="togglePassVis('regPass', this)"
+                  aria-label="Hiện mật khẩu">
+                  <i class="ph ph-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="auth-field">
+              <label class="auth-label" for="regPass2">Xác nhận mật khẩu <span class="req">*</span></label>
+              <input id="regPass2" type="password" class="auth-input" placeholder="••••••" autocomplete="new-password"
+                required />
+            </div>
+          </div>
+          <div id="registerError" class="auth-error" role="alert" aria-live="polite"></div>
+          <button type="submit" class="btn-primary auth-submit">Tạo tài khoản</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+     APP (hidden until auth)
+══════════════════════════════════════════ -->
+  <div id="appContainer" class="app-container" hidden>
+
+    <!-- SIDEBAR -->
+    <nav id="sidebar" class="sidebar" role="navigation" aria-label="Main navigation">
+      <div class="sidebar-brand">
+        <button class="brand-mark sidebar-toggle" id="sidebarToggleBtn" aria-label="Thu gọn thanh bên"
+          aria-expanded="true" title="Thu gọn / mở rộng">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <rect width="28" height="28" rx="6" fill="#10b981" />
+            <path d="M8 10h12M8 14h8M8 18h10" stroke="white" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+        <span class="brand-wordmark">StudyNote</span>
+      </div>
+
+      <ul class="nav-list" role="list">
+        <li><a href="#" class="nav-item active" data-page="dashboard" id="nav-dashboard" aria-current="page">
+            <i class="ph-fill ph-squares-four nav-icon" aria-hidden="true"></i>
+            <span class="nav-label">Tổng quan</span>
+          </a></li>
+        <li><a href="#" class="nav-item" data-page="subjects" id="nav-subjects">
+            <i class="ph-fill ph-books nav-icon" aria-hidden="true"></i>
+            <span class="nav-label">Môn học</span>
+          </a></li>
+        <li><a href="#" class="nav-item" data-page="notes" id="nav-notes">
+            <i class="ph-fill ph-note-pencil nav-icon" aria-hidden="true"></i>
+            <span class="nav-label">Ghi chú</span>
+          </a></li>
+        <li><a href="#" class="nav-item" data-page="assignments" id="nav-assignments">
+            <i class="ph-fill ph-clipboard-text nav-icon" aria-hidden="true"></i>
+            <span class="nav-label">Bài tập</span>
+            <span class="nav-badge" id="assignBadge">0</span>
+          </a></li>
+        <li><a href="#" class="nav-item" data-page="checklist" id="nav-checklist">
+            <i class="ph-fill ph-check-square nav-icon" aria-hidden="true"></i>
+            <span class="nav-label">Hôm nay</span>
+          </a></li>
+      </ul>
+
+      <div class="sidebar-divider"></div>
+      <p class="sidebar-group-label">Môn học</p>
+      <ul class="subject-quicklist" id="sidebarSubjectList" role="list"></ul>
+
+      <!-- Streak widget -->
+      <div class="sidebar-divider"></div>
+      <div id="streakWidget" class="streak-widget-wrap"></div>
+
+      <div class="sidebar-footer">
+        <div class="user-row">
+          <div class="user-avatar" id="userAvatar" aria-hidden="true">?</div>
+          <div class="user-meta">
+            <span class="user-name" id="userName">—</span>
+            <span class="user-sub" id="userUni">—</span>
+          </div>
+          <button class="icon-btn" onclick="doLogout()" title="Đăng xuất" aria-label="Đăng xuất">
+            <i class="ph ph-sign-out" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <div class="layout-main" id="layoutMain">
+      <header class="topbar" role="banner">
+        <h2 class="topbar-heading" id="topbarHeading">Tổng quan</h2>
+        <div class="topbar-right">
+          <button class="icon-btn" id="themeBtn" aria-label="Đổi giao diện">
+            <i class="ph-fill ph-moon" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- ── DASHBOARD ── -->
+      <main id="page-dashboard" class="page active" role="main">
+        <div class="page-intro">
+          <div>
+            <h1 id="greetMsg" class="page-h1">Chào buổi sáng</h1>
+            <p class="page-sub" id="dateStr"></p>
+          </div>
+          <button class="btn-primary" onclick="showPage('checklist')">
+            <i class="ph ph-plus" aria-hidden="true"></i> Thêm task
+          </button>
+        </div>
+
+        <div class="bento-stats" role="region" aria-label="Thống kê tổng quan">
+          <div class="bento-cell bento-accent" onclick="showPage('assignments')" role="button" tabindex="0">
+            <span class="bento-num" id="stat-assign">0</span>
+            <span class="bento-lbl">Bài tập chờ nộp</span>
+            <i class="ph-fill ph-warning-circle bento-bg-icon" aria-hidden="true"></i>
+          </div>
+          <div class="bento-cell" onclick="showPage('subjects')" role="button" tabindex="0">
+            <span class="bento-num" id="stat-subj">0</span>
+            <span class="bento-lbl">Môn học</span>
+            <span class="bento-tag" id="semesterTag">—</span>
+          </div>
+          <div class="bento-cell" onclick="showPage('notes')" role="button" tabindex="0">
+            <span class="bento-num" id="stat-notes">0</span>
+            <span class="bento-lbl">Ghi chú</span>
+          </div>
+          <div class="bento-cell bento-progress-cell" onclick="showPage('checklist')" role="button" tabindex="0">
+            <div class="bento-progress-top">
+              <span class="bento-num"><span id="stat-done">0</span>/<span id="stat-total">0</span></span>
+              <span class="bento-lbl">Task hôm nay</span>
+            </div>
+            <div class="progress-bar-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+              <div class="progress-fill" id="dash-progress"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Streak dashboard section (different layout family) -->
+        <div class="panel" id="streakDashSection" style="margin-bottom:16px"></div>
+
+        <div class="dashboard-split">
+          <section class="panel" aria-labelledby="dl-heading">
+            <div class="panel-header">
+              <h2 class="panel-h2" id="dl-heading">Deadline sắp tới</h2>
+              <a href="#" class="panel-link" onclick="showPage('assignments')">Xem tất cả</a>
+            </div>
+            <ol class="deadline-list" id="deadlineList"></ol>
+          </section>
+          <section class="panel" aria-labelledby="cl-heading">
+            <div class="panel-header">
+              <h2 class="panel-h2" id="cl-heading">Checklist hôm nay</h2>
+              <a href="#" class="panel-link" onclick="showPage('checklist')">Mở</a>
+            </div>
+            <div class="mini-prog-wrap">
+              <div class="mini-prog-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                <div class="mini-prog-fill" id="dash-mini-progress"></div>
+              </div>
+              <span class="mini-prog-label" id="dash-mini-label">0 / 0</span>
+            </div>
+            <ul class="mini-task-list" id="miniTaskList"></ul>
+          </section>
+        </div>
+
+        <section class="panel mt-panel" aria-labelledby="prog-heading">
+          <div class="panel-header">
+            <h2 class="panel-h2" id="prog-heading">Tiến độ môn học</h2>
+          </div>
+          <div class="subject-prog-grid" id="subjectProgGrid"></div>
+        </section>
+      </main>
+
+      <!-- ── SUBJECTS ── -->
+      <main id="page-subjects" class="page" role="main" hidden>
+        <div class="page-intro">
+          <div>
+            <h1 class="page-h1">Môn học</h1>
+            <p class="page-sub" id="subjectSemesterLabel">—</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="semesterFilter" class="filter-select" onchange="onSemesterChange()"
+              aria-label="Chọn kỳ học"></select>
+            <button class="btn-outline btn-sm" onclick="openAddSemesterModal()">
+              <i class="ph ph-plus" aria-hidden="true"></i> Kỳ mới
+            </button>
+            <button class="btn-primary" onclick="openSubjectEdit()">
+              <i class="ph ph-plus" aria-hidden="true"></i> Thêm môn
+            </button>
+          </div>
+        </div>
+        <div class="subjects-grid" id="subjectsGrid" role="list"></div>
+      </main>
+
+      <!-- ── NOTES ── -->
+      <main id="page-notes" class="page" role="main" hidden>
+        <div class="page-intro">
+          <div>
+            <h1 class="page-h1">Ghi chú</h1>
+            <p class="page-sub">Theo môn học</p>
+          </div>
+          <button class="btn-primary" onclick="openNoteEdit()">
+            <i class="ph ph-plus" aria-hidden="true"></i> Thêm ghi chú
+          </button>
+        </div>
+        <div class="filter-row" role="search">
+          <select id="noteSubjectFilter" class="filter-select" onchange="filterNotes()" aria-label="Lọc môn"></select>
+          <select id="noteTagFilter" class="filter-select" onchange="filterNotes()" aria-label="Lọc tag">
+            <option value="">Tất cả tag</option>
+            <option value="lưu-ý">Lưu ý</option>
+            <option value="lý-thuyết">Lý thuyết</option>
+            <option value="đề-cương">Đề cương</option>
+            <option value="khác">Khác</option>
+          </select>
+          <div class="search-wrap">
+            <i class="ph ph-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" id="noteSearch" placeholder="Tìm kiếm..." oninput="filterNotes()"
+              aria-label="Tìm kiếm" />
+          </div>
+        </div>
+        <div class="notes-grid" id="notesGrid" role="list"></div>
+      </main>
+
+      <!-- ── ASSIGNMENTS ── -->
+      <main id="page-assignments" class="page" role="main" hidden>
+        <div class="page-intro">
+          <div>
+            <h1 class="page-h1">Bài tập</h1>
+            <p class="page-sub">Deadline và tiến độ</p>
+          </div>
+          <button class="btn-primary" onclick="openAssignEdit()">
+            <i class="ph ph-plus" aria-hidden="true"></i> Thêm bài tập
+          </button>
+        </div>
+        <div class="filter-row">
+          <select id="assignSubjectFilter" class="filter-select" onchange="filterAssignments()"
+            aria-label="Lọc môn"></select>
+          <select id="assignStatusFilter" class="filter-select" onchange="filterAssignments()" aria-label="Trạng thái">
+            <option value="">Tất cả</option>
+            <option value="0">Chưa làm</option>
+            <option value="1">Đang làm</option>
+            <option value="2">Hoàn thành</option>
+          </select>
+          <select id="assignPriorityFilter" class="filter-select" onchange="filterAssignments()" aria-label="Ưu tiên">
+            <option value="">Tất cả ưu tiên</option>
+            <option value="3">Khẩn cấp</option>
+            <option value="2">Cao</option>
+            <option value="1">Trung bình</option>
+            <option value="0">Thấp</option>
+          </select>
+          <select id="assignSortFilter" class="filter-select" onchange="filterAssignments()" aria-label="Sắp xếp">
+            <option value="asc">Deadline sớm nhất</option>
+            <option value="desc">Deadline muộn nhất</option>
+          </select>
+        </div>
+        <div class="assignments-stack" id="assignmentsList" role="list"></div>
+      </main>
+
+      <!-- ── CHECKLIST ── -->
+      <main id="page-checklist" class="page" role="main" hidden>
+        <div class="page-intro">
+          <div>
+            <h1 class="page-h1">Hôm nay</h1>
+            <p class="page-sub" id="checklistDateLabel"></p>
+          </div>
+        </div>
+        <nav class="date-nav" aria-label="Điều hướng ngày">
+          <button class="btn-ghost btn-sm" onclick="changeDay(-1)"><i class="ph ph-caret-left"></i> Hôm qua</button>
+          <button class="btn-outline btn-sm" id="todayBtn" onclick="goToday()">Hôm nay</button>
+          <button class="btn-ghost btn-sm" onclick="changeDay(1)">Ngày mai <i class="ph ph-caret-right"></i></button>
+        </nav>
+
+        <div class="checklist-panel">
+          <div class="checklist-prog-row">
+            <div class="checklist-prog-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+              id="checklistProgBar">
+              <div class="checklist-prog-fill" id="checklistProgFill"></div>
+            </div>
+            <span class="checklist-prog-label" id="checklistProgLabel">0 / 0 hoàn thành</span>
+          </div>
+          <ul class="task-list" id="taskList" role="list"></ul>
+          <div class="add-task-row">
+            <select id="newTaskSubject" class="filter-select" style="width:auto;flex-shrink:0"
+              aria-label="Môn học của task"></select>
+            <input type="text" id="newTaskInput" class="task-input" placeholder="Thêm task mới..."
+              onkeydown="if(event.key==='Enter')addTask()" aria-label="Nhập task" />
+            <button class="btn-primary btn-sm" onclick="addTask()"><i class="ph ph-plus"></i></button>
+          </div>
+          <div class="task-secondary-actions">
+            <button class="btn-ghost btn-sm" onclick="copyYesterday()"><i class="ph ph-copy"></i> Copy task chưa xong từ
+              hôm qua</button>
+            <button class="btn-ghost btn-sm" onclick="clearDone()"><i class="ph ph-trash"></i> Xoá task đã xong</button>
+          </div>
+        </div>
+      </main>
+
+    </div><!-- /layout-main -->
+  </div><!-- /appContainer -->
+
+  <!-- ══════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════ -->
+
+  <!-- Subject Modal -->
+  <div id="subjectModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="subjectModalTitle"
+    onclick="closeModal('subjectModal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <h3 class="modal-title" id="subjectModalTitle">Thêm môn học</h3>
+        <button class="icon-btn" onclick="closeModal('subjectModal')" aria-label="Đóng"><i class="ph ph-x"></i></button>
+      </div>
+      <form onsubmit="saveSubject(event)" novalidate>
+        <div class="form-grid-2">
+          <div class="field"><label class="field-label" for="sName">Tên môn <span class="req">*</span></label>
+            <input type="text" id="sName" class="field-input" placeholder="VD: Cấu Trúc Dữ Liệu" required />
+          </div>
+          <div class="field"><label class="field-label" for="sCode">Mã môn</label>
+            <input type="text" id="sCode" class="field-input field-mono" placeholder="VD: CSD201" />
+          </div>
+          <div class="field"><label class="field-label" for="sLecturer">Giảng viên</label>
+            <input type="text" id="sLecturer" class="field-input" placeholder="Họ tên" />
+          </div>
+          <div class="field"><label class="field-label" for="sCredits">Tín chỉ</label>
+            <input type="number" id="sCredits" class="field-input" min="1" max="10" value="3" />
+          </div>
+          <div class="field"><label class="field-label" for="sSemester">Kỳ học</label>
+            <input type="text" id="sSemester" class="field-input field-mono" placeholder="VD: SU2026" value="SU2026" />
+          </div>
+          <div class="field"><label class="field-label" for="sPassThresh">Điểm qua môn</label>
+            <input type="number" id="sPassThresh" class="field-input field-mono" min="0" max="10" step="0.1"
+              value="5" />
+          </div>
+        </div>
+        <div class="field"><label class="field-label" for="sColor">Màu nhận diện</label>
+          <div class="color-row">
+            <input type="color" id="sColor" class="color-swatch" value="#10b981" />
+            <div class="color-presets" role="group">
+              <button type="button" class="color-dot" style="--c:#10b981"
+                onclick="document.getElementById('sColor').value='#10b981'"></button>
+              <button type="button" class="color-dot" style="--c:#3b82f6"
+                onclick="document.getElementById('sColor').value='#3b82f6'"></button>
+              <button type="button" class="color-dot" style="--c:#f59e0b"
+                onclick="document.getElementById('sColor').value='#f59e0b'"></button>
+              <button type="button" class="color-dot" style="--c:#ef4444"
+                onclick="document.getElementById('sColor').value='#ef4444'"></button>
+              <button type="button" class="color-dot" style="--c:#8b5cf6"
+                onclick="document.getElementById('sColor').value='#8b5cf6'"></button>
+              <button type="button" class="color-dot" style="--c:#ec4899"
+                onclick="document.getElementById('sColor').value='#ec4899'"></button>
+              <button type="button" class="color-dot" style="--c:#06b6d4"
+                onclick="document.getElementById('sColor').value='#06b6d4'"></button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" onclick="closeModal('subjectModal')">Huỷ</button>
+          <button type="submit" class="btn-primary">Lưu môn học</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Semester Modal -->
+  <div id="semesterModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="semesterModalTitle"
+    onclick="closeModal('semesterModal')">
+    <div class="modal" style="max-width:380px" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <h3 class="modal-title" id="semesterModalTitle">Thêm kỳ học mới</h3>
+        <button class="icon-btn" onclick="closeModal('semesterModal')" aria-label="Đóng"><i
+            class="ph ph-x"></i></button>
+      </div>
+      <div class="field">
+        <label class="field-label" for="newSemesterCode">Mã kỳ học <span class="req">*</span></label>
+        <input type="text" id="newSemesterCode" class="field-input field-mono" placeholder="VD: FA2026, SU2027" />
+        <p style="font-size:.72rem;color:var(--text-4);margin-top:6px">Định dạng gợi ý: SU/FA/SP + Năm (VD: SU2026)</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeModal('semesterModal')">Huỷ</button>
+        <button class="btn-primary" onclick="addNewSemester()">Tạo kỳ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Note Modal -->
+  <div id="noteModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="noteModalTitle"
+    onclick="closeModal('noteModal')">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <h3 class="modal-title" id="noteModalTitle">Thêm ghi chú</h3>
+        <button class="icon-btn" onclick="closeModal('noteModal')" aria-label="Đóng"><i class="ph ph-x"></i></button>
+      </div>
+      <form onsubmit="saveNote(event)" novalidate>
+        <div class="field"><label class="field-label" for="nTitle">Tiêu đề <span class="req">*</span></label>
+          <input type="text" id="nTitle" class="field-input" placeholder="Tiêu đề ghi chú..." required />
+        </div>
+        <div class="form-grid-2">
+          <div class="field"><label class="field-label" for="nSubject">Môn học <span class="req">*</span></label>
+            <select id="nSubject" class="field-input" required>
+              <option value="">Chọn môn</option>
+            </select>
+          </div>
+          <div class="field"><label class="field-label" for="nTag">Tag</label>
+            <select id="nTag" class="field-input">
+              <option value="lý-thuyết">Lý thuyết</option>
+              <option value="lưu-ý">Lưu ý</option>
+              <option value="đề-cương">Đề cương</option>
+              <option value="khác">Khác</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label class="field-label" for="nContent">Nội dung</label>
+          <textarea id="nContent" class="field-input field-textarea" rows="6" placeholder="Nội dung..."></textarea>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" onclick="closeModal('noteModal')">Huỷ</button>
+          <button type="submit" class="btn-primary">Lưu ghi chú</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Assignment Modal -->
+  <div id="assignmentModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="assignModalTitle"
+    onclick="closeModal('assignmentModal')">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <h3 class="modal-title" id="assignModalTitle">Thêm bài tập</h3>
+        <button class="icon-btn" onclick="closeModal('assignmentModal')" aria-label="Đóng"><i
+            class="ph ph-x"></i></button>
+      </div>
+      <form onsubmit="saveAssignment(event)" novalidate>
+        <div class="field"><label class="field-label" for="aTitle">Tên bài tập <span class="req">*</span></label>
+          <input type="text" id="aTitle" class="field-input" required placeholder="Tên bài tập..." />
+        </div>
+        <div class="form-grid-2">
+          <div class="field"><label class="field-label" for="aSubject">Môn học <span class="req">*</span></label>
+            <select id="aSubject" class="field-input" required>
+              <option value="">Chọn môn</option>
+            </select>
+          </div>
+          <div class="field"><label class="field-label" for="aDeadline">Deadline</label>
+            <input type="datetime-local" id="aDeadline" class="field-input field-mono" />
+          </div>
+          <div class="field"><label class="field-label" for="aPriority">Ưu tiên</label>
+            <select id="aPriority" class="field-input">
+              <option value="0">Thấp</option>
+              <option value="1" selected>Trung bình</option>
+              <option value="2">Cao</option>
+              <option value="3">Khẩn cấp</option>
+            </select>
+          </div>
+          <div class="field"><label class="field-label" for="aStatus">Trạng thái</label>
+            <select id="aStatus" class="field-input">
+              <option value="0" selected>Chưa làm</option>
+              <option value="1">Đang làm</option>
+              <option value="2">Hoàn thành</option>
+            </select>
+          </div>
+        </div>
+        <div class="field"><label class="field-label" for="aDesc">Mô tả</label>
+          <textarea id="aDesc" class="field-input field-textarea" rows="3" placeholder="Mô tả..."></textarea>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" onclick="closeModal('assignmentModal')">Huỷ</button>
+          <button type="submit" class="btn-primary">Lưu bài tập</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Note Detail Modal -->
+  <div id="noteDetailModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="noteDetailTitle"
+    onclick="closeModal('noteDetailModal')">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <div class="note-detail-chips" id="noteDetailChips"></div>
+        <button class="icon-btn" onclick="closeModal('noteDetailModal')" aria-label="Đóng"><i
+            class="ph ph-x"></i></button>
+      </div>
+      <div style="padding:0 24px 20px">
+        <h2 class="note-detail-h2" id="noteDetailTitle"></h2>
+        <p class="note-detail-date" id="noteDetailDate"></p>
+        <div class="note-detail-body" id="noteDetailBody"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost btn-sm" id="ndEdit"><i class="ph ph-pencil"></i> Sửa</button>
+        <button class="btn-danger btn-sm" id="ndDelete"><i class="ph ph-trash"></i> Xoá</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grade Modal -->
+  <div id="gradeModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="gradeModalTitle"
+    onclick="closeModal('gradeModal')">
+    <div class="modal modal-xl" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <h3 class="modal-title" id="gradeModalTitle">Bảng điểm</h3>
+        <button class="icon-btn" onclick="closeModal('gradeModal')" aria-label="Đóng"><i class="ph ph-x"></i></button>
+      </div>
+      <input type="hidden" id="gradeSubjectId" />
+      <!-- Pass threshold -->
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--bd)">
+        <label class="field-label" style="margin:0;white-space:nowrap" for="gradePassThreshold">Điểm qua môn (≥)</label>
+        <input type="number" id="gradePassThreshold" class="field-input field-mono" min="0" max="10" step="0.1"
+          style="width:80px" onchange="GradeModule.updateThreshold(+document.getElementById('gradeSubjectId').value)" />
+        <span id="gradeWeightTotal" class="grade-weight-total"></span>
+        <button class="btn-primary btn-sm" style="margin-left:auto"
+          onclick="GradeModule.addItem(+document.getElementById('gradeSubjectId').value)">
+          <i class="ph ph-plus"></i> Thêm grade item
+        </button>
+      </div>
+      <!-- Summary -->
+      <div id="gradeSummary" style="padding:12px 20px;border-bottom:1px solid var(--bd)"></div>
+      <!-- Table -->
+      <div style="overflow-x:auto">
+        <table class="grade-table" aria-label="Bảng điểm">
+          <thead>
+            <tr>
+              <th>Grade Item</th>
+              <th>Weight</th>
+              <th>Điểm (0–10)</th>
+              <th>Điều kiện</th>
+              <th>Quy đổi</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="gradeTableBody"></tbody>
+        </table>
+      </div>
+      <div class="modal-foot">
+        <button class="btn-ghost" onclick="closeModal('gradeModal')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grade Item Modal -->
+  <div id="gradeItemModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="gradeItemModalTitle"
+    onclick="closeModal('gradeItemModal')">
+    <div class="modal" style="max-width:480px" onclick="event.stopPropagation()">
+      <div class="modal-head">
+        <h3 class="modal-title" id="gradeItemModalTitle">Thêm Grade Item</h3>
+        <button class="icon-btn" onclick="closeModal('gradeItemModal')" aria-label="Đóng"><i
+            class="ph ph-x"></i></button>
+      </div>
+      <form onsubmit="GradeModule.saveItem(event)" novalidate>
+        <input type="hidden" id="giSubjectId" /><input type="hidden" id="giId" />
+        <div class="field"><label class="field-label" for="giName">Tên grade item <span class="req">*</span></label>
+          <input type="text" id="giName" class="field-input" placeholder="VD: Chuyên cần, Lab, Giữa kỳ, Cuối kỳ"
+            required />
+        </div>
+        <div class="form-grid-2">
+          <div class="field"><label class="field-label" for="giWeight">Weight (%) <span class="req">*</span></label>
+            <input type="number" id="giWeight" class="field-input field-mono" min="1" max="100" placeholder="VD: 10"
+              required />
+          </div>
+          <div class="field"><label class="field-label" for="giValue">Điểm (0–10)</label>
+            <input type="number" id="giValue" class="field-input field-mono" min="0" max="10" step="0.1"
+              placeholder="Để trống nếu chưa có" />
+          </div>
+        </div>
+        <div class="form-grid-2">
+          <div class="field"><label class="field-label" for="giCondition">Điều kiện qua</label>
+            <input type="text" id="giCondition" class="field-input field-mono" placeholder="VD: >1, >=4, >0" />
+            <p style="font-size:.7rem;color:var(--text-4);margin-top:4px">Toán tử: &gt; &gt;= &lt; &lt;= ==</p>
+          </div>
+          <div class="field"><label class="field-label" for="giConditionLabel">Tên điều kiện</label>
+            <input type="text" id="giConditionLabel" class="field-input" placeholder="VD: Phải vượt qua" />
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" onclick="closeModal('gradeItemModal')">Huỷ</button>
+          <button type="submit" class="btn-primary">Lưu</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">
+    <i class="ph-fill ph-check-circle toast-icon" aria-hidden="true"></i>
+    <span id="toastMsg"></span>
+  </div>
+
+  <!-- Streak Celebration Overlay -->
+  <div id="streakCelebration" class="streak-celebration-overlay" aria-live="assertive" aria-atomic="true">
+    <div class="celeb-inner">
+      <div id="celebChar" class="celeb-char"></div>
+      <div id="celebMsg" class="celeb-msg"></div>
+      <div class="celeb-sparks" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/auth.js"></script>
+  <script src="js/grades.js"></script>
+  <script src="js/streak.js"></script>
+  <script src="js/redesign.js"></script>
+</body>
+
+</html>

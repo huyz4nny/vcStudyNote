@@ -1,0 +1,15 @@
+# Claude Code local config & memory
+.claude/
+memory/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+
+# Node (if added later)
+node_modules/
