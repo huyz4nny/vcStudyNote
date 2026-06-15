@@ -213,12 +213,21 @@ function initSidebar() {
 }
 
 function renderSidebarSubjects() {
-  document.getElementById('sidebarSubjectList').innerHTML = AppData.subjects().map(s => `
-    <li><button class="subject-quick-item" onclick="filterBySubject(${s.id})">
-      <div class="sq-dot" style="background:${s.colorHex}"></div>
-      <span class="sq-label">${esc(s.code)} · ${esc(s.name.split(' ').slice(0, 3).join(' '))}</span>
-    </button></li>
-  `).join('');
+  let list = AppData.subjects();
+  if (activeSemester) list = list.filter(s => s.semester === activeSemester);
+
+  document.getElementById('sidebarSubjectList').innerHTML = list.map(s => {
+    const nc = AppData.notes().filter(n => n.subjectId === s.id).length;
+    const ac = AppData.assignments().filter(a => a.subjectId === s.id).length;
+    return `
+    <li><button class="subject-quick-item" onclick="filterBySubject(${s.id})" title="${esc(s.code)} — ${esc(s.name)}">
+      <span class="sq-code" style="--c:${s.colorHex}">${esc(s.code)}</span>
+      <span class="sq-text">
+        <span class="sq-name">${esc(s.name)}</span>
+        <span class="sq-stats"><i class="ph ph-note-pencil"></i>${nc}<i class="ph ph-clipboard-text"></i>${ac}</span>
+      </span>
+    </button></li>`;
+  }).join('');
 }
 
 function filterBySubject(id) {
