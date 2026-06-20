@@ -2,7 +2,7 @@
 
 # 🎓 StudyNote
 
-### Ứng dụng web quản lý học tập dành cho sinh viên
+### Ứng dụng web quản lý học tập cá nhân dành cho sinh viên
 
 *Ghi chú theo môn · Theo dõi deadline · Checklist hằng ngày · Chuỗi streak gamification · Tính điểm GPA*
 
@@ -12,154 +12,105 @@
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 ![LocalStorage](https://img.shields.io/badge/Storage-localStorage-4CAF50?style=for-the-badge)
-![No Build](https://img.shields.io/badge/build-zero%20config-purple?style=for-the-badge)
 
 <br />
 
-**[✨ Tính năng](#-tính-năng-chính)** ·
-**[🚀 Cài đặt](#-cài-đặt--chạy)** ·
-**[🏗️ Kiến trúc](#️-công-nghệ--cấu-trúc)** ·
-**[🗺️ Roadmap](#️-roadmap)**
+**[🌍 Trải nghiệm thực tế tại: huyz4nny.xyz](http://huyz4nny.xyz)**
 
 </div>
 
 ---
 
-## 📖 Giới thiệu
+## 📖 Giới thiệu dự án
 
-**StudyNote** là một ứng dụng web *single-page* giúp sinh viên tổ chức việc học một cách trực quan và có động lực. Mọi dữ liệu được lưu ngay trên trình duyệt bằng `localStorage` — **không cần server, không cần database, không cần cài đặt gì** — chỉ cần mở là chạy.
+**StudyNote** là một ứng dụng web dạng *Single-Page Application (SPA)* được thiết kế nhằm giúp các bạn sinh viên tổ chức việc học một cách trực quan, tối ưu và tràn đầy động lực. 
 
-Điểm khác biệt của StudyNote không chỉ là quản lý ghi chú và deadline, mà còn ở **hệ thống streak gamification** khích lệ thói quen học mỗi ngày và **module tính điểm GPA** theo trọng số từng cột điểm.
+Dự án hiện đang ở giai đoạn **Frontend hoàn chỉnh**, mọi dữ liệu được lưu trữ siêu tốc và an toàn ngay trên trình duyệt thông qua `localStorage`. Khác biệt với các ứng dụng To-do list thông thường, StudyNote tập trung mạnh vào **Gamification** (Tạo động lực bằng hệ thống Streak) và **Đặc thù sinh viên** (Quản lý môn học, tín chỉ, tính điểm GPA).
 
-> 💡 Phiên bản hiện tại là bản frontend hoàn chỉnh (vanilla JS). Kế hoạch nâng cấp lên **ASP.NET Core 8 + EF Core + SQL Server** được mô tả trong [`StudyNote_ProjectPlan.md`](./StudyNote_ProjectPlan.md).
-
----
-
-## ✨ Tính năng chính
-
-| Module | Mô tả |
-|--------|-------|
-| 🔐 **Xác thực** | Đăng ký / đăng nhập, mỗi người dùng có dữ liệu riêng (lưu localStorage, mật khẩu được hash) |
-| 📚 **Môn học** | Quản lý môn theo kỳ: tên, mã môn, giảng viên, số tín chỉ, màu nhận diện, học kỳ |
-| 📝 **Ghi chú** | Ghi chú gắn với từng môn, phân loại theo tag (*lưu-ý / lý-thuyết / đề-cương*), ghim lên đầu, tìm kiếm & lọc |
-| 📋 **Bài tập / Deadline** | Theo dõi deadline với mức ưu tiên (Thấp → Khẩn), trạng thái (Chưa làm / Đang làm / Hoàn thành), badge cảnh báo deadline gần & quá hạn |
-| ✅ **Checklist hôm nay** | Danh sách việc cần làm theo ngày, kéo-thả sắp xếp, thanh tiến độ, xem lại lịch sử các ngày |
-| 🔥 **Streak** | Hệ thống chuỗi ngày học có **4 cấp độ**, hiệu ứng ăn mừng khi hoàn thành — tạo động lực duy trì thói quen |
-| 🎯 **Tính điểm (GPA)** | Bảng điểm theo trọng số từng cột, ngưỡng đạt tùy chỉnh, tự tính điểm tổng kết & cảnh báo điều kiện |
-| 📊 **Dashboard** | Tổng quan: số môn, ghi chú, bài tập chờ nộp, deadline gần nhất, checklist & streak hôm nay |
+> 🌐 **Thông tin Triển khai (Deployment):**
+> - **Tên miền (Domain):** `huyz4nny.xyz` (Được đăng ký và quản lý tại **Nhân Hòa**).
+> - **Máy chủ (Hosting):** Được lưu trữ và triển khai thông qua dịch vụ **SmarterASP.NET** (Gói Trial).
+> - **CI/CD:** Đồng bộ và cập nhật mã nguồn hoàn toàn tự động nhờ tính năng **GitHub Deployment** của SmarterASP.NET.
 
 ---
 
-## 🏗️ Công nghệ & cấu trúc
+## ✨ Tính năng nổi bật
 
-### Công nghệ sử dụng
-
-| Lớp | Công nghệ |
-|-----|-----------|
-| **Ngôn ngữ** | HTML5, CSS3, JavaScript (ES6+, vanilla — không framework) |
-| **Lưu trữ** | Browser `localStorage` (không cần backend) |
-| **Icon** | [Phosphor Icons](https://phosphoricons.com/) |
-| **Font** | Google Fonts |
-| **Build** | Không cần — mở thẳng `index.html` |
-
-### Cấu trúc thư mục
-
-```
-dotnetCheckList/
-├── studynote-web/              # 🌐 Ứng dụng web (bản chạy thực tế)
-│   ├── index.html             # Toàn bộ giao diện SPA (dashboard, modals, panels)
-│   ├── css/
-│   │   ├── redesign.css       # Giao diện chính (bản redesign)
-│   │   └── style.css          # Style nền tảng
-│   └── js/
-│       ├── auth.js            # Đăng ký / đăng nhập, quản lý người dùng
-│       ├── data.js            # Dữ liệu demo (môn, ghi chú, bài tập, checklist)
-│       ├── app.js             # Logic ứng dụng cốt lõi
-│       ├── redesign.js        # Render UI, điều hướng, modal, sự kiện
-│       ├── streak.js          # Streak Engine — tính cấp độ chuỗi học
-│       └── grades.js          # Grade Module — tính điểm theo trọng số
-│
-├── StudyNote_ProjectPlan.md    # 📐 Kế hoạch nâng cấp lên ASP.NET Core 8
-└── README.md                   # 📄 Tài liệu này
-```
+| Module | Chi tiết tính năng |
+|--------|--------------------|
+| 🔐 **Xác thực người dùng** | Đăng ký & Đăng nhập mượt mà. Hệ thống tự động mã hóa mật khẩu, phân chia không gian làm việc (workspace) riêng biệt cho từng tài khoản trên cùng một thiết bị. |
+| 📚 **Quản lý Môn học** | Lưu trữ thông tin chi tiết: Tên môn, Mã môn, Giảng viên, Số tín chỉ, Phân loại theo Học kỳ và gắn Màu sắc nhận diện riêng biệt. |
+| 📝 **Smart Notes** | Hệ thống ghi chú thông minh gắn liền với môn học. Hỗ trợ phân loại qua tag (*lưu ý / lý thuyết / đề cương*), ghim nội dung quan trọng lên đầu, tìm kiếm nhanh và lọc thông tin. |
+| 📋 **Deadline Tracker** | Theo dõi bài tập theo mức độ ưu tiên (Thấp → Khẩn cấp). Huy hiệu (badge) cảnh báo tự động khi deadline sắp đến hoặc đã quá hạn. |
+| ✅ **Checklist & To-do** | Bảng công việc mỗi ngày với khả năng kéo-thả (Drag & Drop) siêu nhạy, thanh tiến độ trực quan và khả năng xem lại lịch sử các ngày trước đó. |
+| 🔥 **Streak Engine** | **Gamification cốt lõi:** Hệ thống tính điểm chuỗi ngày học liên tục với **4 cấp độ** (Khởi động, Chăm chỉ, Đa môn, ALL CLEAR) kèm hiệu ứng ăn mừng pháo hoa đẹp mắt nhằm duy trì thói quen học tập. |
+| 🎯 **Bộ máy GPA (Tính điểm)**| Theo dõi đa dạng các cột điểm theo trọng số (Lab 20%, Assignment 30%, Final 50%). Tự động cảnh báo môn học có nguy cơ rớt hoặc tính điểm trung bình tích lũy. |
+| 📊 **Dashboard Tổng quan** | Giao diện Control Panel hiện đại thống kê toàn bộ tiến độ: số môn đang học, deadline sắp cháy, số ghi chú, chuỗi streak hiện tại. |
 
 ---
 
-## 🚀 Cài đặt & chạy
+## 🏗️ Ngăn xếp Công nghệ (Tech Stack)
 
-Không cần build, không cần npm. Chọn 1 trong 2 cách:
+Dự án được xây dựng hoàn toàn bằng các công nghệ nền tảng, không phụ thuộc vào framework nặng nề, đảm bảo tốc độ phản hồi tính bằng mili-giây:
 
-### Cách 1 — Mở trực tiếp
+- **Frontend:** HTML5, CSS3, JavaScript ES6+ (Vanilla JS).
+- **Cơ sở dữ liệu:** Browser `localStorage` (API lưu trữ cục bộ).
+- **Kiến trúc UI/UX:** Responsive Design, Micro-interactions (Hiệu ứng hover, transition), DOM Manipulation.
+- **Hạ tầng mạng:** 
+  - Domain cung cấp bởi **Nhân Hòa**.
+  - Hosting cung cấp bởi **SmarterASP.NET**.
+- **Công cụ hỗ trợ:** 
+  - Icon: [Phosphor Icons](https://phosphoricons.com/)
+  - Font chữ: Google Fonts (Inter/Roboto).
+
+---
+
+## 🚀 Hướng dẫn Cài đặt & Chạy dưới Local
+
+Dự án không cần cài đặt môi trường phức tạp (không NodeJS, không npm). Bạn có thể chạy theo 2 cách cực kỳ đơn giản:
+
+### Cách 1: Chạy trực tiếp qua trình duyệt
 ```bash
 git clone https://github.com/huyz4nny/vcStudyNote.git
 cd vcStudyNote/studynote-web
-# Mở file index.html bằng trình duyệt
+# Bấm đúp vào file index.html để trải nghiệm ngay
 ```
 
-### Cách 2 — Dùng Live Server (khuyến nghị)
-Dùng extension **Live Server** của VS Code, hoặc một HTTP server bất kỳ:
-
+### Cách 2: Chạy qua Live Server (Khuyên dùng cho Developer)
+Mở dự án bằng Visual Studio Code, sử dụng extension **Live Server** hoặc dùng các công cụ HTTP Server tích hợp sẵn:
 ```bash
-cd studynote-web
-npx serve .          # hoặc: python -m http.server 8000
+cd vcStudyNote/studynote-web
+# Nếu dùng Node.js
+npx serve . 
+
+# Nếu dùng Python
+python -m http.server 8000
 ```
-
-Rồi mở `http://localhost:8000` (hoặc cổng tương ứng).
-
-> 🔑 **Lần đầu sử dụng:** đăng ký một tài khoản mới ngay trên màn hình đăng nhập. Dữ liệu của bạn được lưu cục bộ trên trình duyệt này.
+Truy cập: `http://localhost:8000`
 
 ---
 
-## 🔥 Hệ thống Streak
+## 🗺️ Lộ trình Phát triển (Roadmap)
 
-Mỗi ngày hoàn thành công việc sẽ được chấm một cấp độ streak, khích lệ duy trì thói quen học:
+Trong tương lai gần, StudyNote sẽ được nâng cấp từ một trang web tĩnh thành một **Hệ thống phần mềm Fullstack hoàn chỉnh** (chi tiết xem tại [`StudyNote_ProjectPlan.md`](./StudyNote_ProjectPlan.md)):
 
-| Cấp | Tên | Biểu tượng | Điều kiện |
-|:---:|-----|:---:|-----------|
-| 1 | Khởi động | ✨ | Ít nhất 1 task hoàn thành |
-| 2 | Chăm chỉ | 🔥 | 100% task xong (trong 1 môn) |
-| 3 | Đa môn | 🔥🔥 | Hoàn thành task từ ≥ 2 môn |
-| 4 | ALL CLEAR | 🔥🔥🔥 | 100% task **và** phủ tất cả môn có task |
-
----
-
-## 🎯 Tính điểm (GPA)
-
-Module **Bảng điểm** cho phép mỗi môn:
-- Thêm nhiều **cột điểm** với **trọng số (%)** riêng (VD: Lab 20%, Assignment 30%, Final 50%)
-- Tự động tính **điểm tổng kết theo trọng số**
-- Đặt **ngưỡng đạt** tùy chỉnh (mặc định 5.0)
-- Gắn **điều kiện** cho từng cột (VD: Final ≥ 4) và cảnh báo khi không đạt
+- [ ] **Xây dựng Backend:** Chuyển đổi sang **ASP.NET Core 8 (Web API)** theo mô hình MVC hoặc Clean Architecture.
+- [ ] **Thiết kế Database:** Sử dụng **Entity Framework Core** kết nối với hệ quản trị cơ sở dữ liệu **Microsoft SQL Server**.
+- [ ] **Bảo mật:** Tích hợp **ASP.NET Core Identity** kết hợp với **JWT Token** để quản lý phiên đăng nhập thực tế.
+- [ ] **Tính năng nâng cao:**
+  - Đồng bộ dữ liệu theo thời gian thực (Cloud Sync).
+  - Gửi email thông báo nhắc nhở deadline tự động.
+  - Hỗ trợ Markdown đầy đủ cho phần Ghi chú.
+  - Tự động xuất lịch học & kết quả ra PDF/Word.
 
 ---
 
-## 🗺️ Roadmap
+## 👨‍💻 Tác giả
 
-Bản hiện tại là frontend hoàn chỉnh. Hướng phát triển tiếp theo (chi tiết trong [`StudyNote_ProjectPlan.md`](./StudyNote_ProjectPlan.md)):
+Được thiết kế và phát triển bởi [**@huyz4nny**](https://github.com/huyz4nny).
 
-- [ ] Nâng cấp backend lên **ASP.NET Core 8 (MVC) + EF Core + SQL Server**
-- [ ] Xác thực bằng **ASP.NET Core Identity** (đa người dùng thực sự)
-- [ ] Đồng bộ dữ liệu đám mây thay cho localStorage
-- [ ] Trình soạn thảo **Markdown** cho ghi chú
-- [ ] Nhắc deadline qua **email**
-- [ ] Export ghi chú ra **PDF / Word**
-- [ ] **Dark mode** & cải thiện responsive mobile
-
----
-
-## 👤 Tác giả
-
-Phát triển bởi [**@huyz4nny**](https://github.com/huyz4nny) — dự án học tập cá nhân.
-
-## 📄 License
-
-Phát hành phục vụ mục đích học tập. Bạn có thể tự do tham khảo và mở rộng.
+Mọi góp ý hoặc báo lỗi, vui lòng tạo Issue trên kho lưu trữ. Nếu bạn thấy dự án này thú vị, hãy để lại một ⭐ nhé!
 
 <div align="center">
-<br />
-
-⭐ **Nếu thấy hữu ích, hãy để lại một star nhé!** ⭐
-
-<sub>Made with ❤️ for students</sub>
-
+<sub>Made with ❤️ & ☕ for students</sub>
 </div>
