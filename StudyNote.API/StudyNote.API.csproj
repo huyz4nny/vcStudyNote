@@ -21,6 +21,10 @@
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.19.1" />
   </ItemGroup>
 
-</Project>
+  <ItemGroup>
+    <!-- Gộp Frontend vào chung Backend khi Publish -->
+    <Content Include="..\studynote-web\**" CopyToPublishDirectory="PreserveNewest" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
 
+</Project>
 

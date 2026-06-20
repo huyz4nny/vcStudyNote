@@ -114,11 +114,14 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ── Middleware ───────────────────────────────────────────────────────────────
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "StudyNote API v1");
-    c.RoutePrefix = string.Empty; // Mở Swagger ở trang gốc "/"
+    c.RoutePrefix = "swagger"; // Mở Swagger ở /swagger thay vì trang gốc
 });
 
 app.UseCors("FrontendPolicy");
