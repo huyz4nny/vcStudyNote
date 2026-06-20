@@ -22,8 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Gộp Frontend vào chung Backend khi Publish -->
-    <Content Include="..\studynote-web\**" CopyToPublishDirectory="PreserveNewest" Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- Gộp Frontend vào chung Backend khi Publish (hỗ trợ cả Windows và Linux build server) -->
+    <Content Include="..\studynote-web\**\*" LinkBase="wwwroot" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
