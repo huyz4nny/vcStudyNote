@@ -58,9 +58,12 @@ const SN_DB = {
   // ── Seed data for new users ───────────────────────
   seedData(uid, displayName) {
     const today = new Date(); today.setHours(0,0,0,0);
+    // Khóa ngày theo LỊCH ĐỊA PHƯƠNG (khớp với dateKey ở redesign.js). Dùng
+    // toISOString() ở đây sẽ lệch ngày với múi giờ VN, khiến task seed "hôm nay"
+    // rơi sang hôm qua.
     const dk = d => {
-      if (typeof d === 'string') return d.slice(0, 10);
-      return d.toISOString().slice(0, 10);
+      const x = (d instanceof Date) ? d : new Date(d);
+      return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;
     };
     const ad = (d, n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r.toISOString(); };
 
@@ -91,6 +94,10 @@ const SN_DB = {
         { id: 6, subjectId: 2, name: 'Bài tập lớn', weight: 40, value: 8.5, condition: null },
         { id: 7, subjectId: 2, name: 'Cuối kỳ', weight: 50, value: null, condition: '>4' },
       ],
+      examReminders: [
+        { id: 8, subjectId: 1, title: 'Kiểm tra 15 phút: QuickSort & độ phức tạp', examDate: dk(ad(today,1)), note: 'Mang máy tính, ôn phần đệ quy', createdAt: ad(today,-1) },
+        { id: 9, subjectId: 3, title: 'Vấn đáp các loại JOIN', examDate: dk(ad(today,4)), note: '', createdAt: ad(today,-1) },
+      ],
       checklistData: {
         [dk(ad(today,-1))]: [
           { id: 101, content: 'Ôn linked list CSD201', isDone: true, sortOrder: 0, subjectId: 1, completedAt: ad(today,-1) },
@@ -113,6 +120,7 @@ const SN_DB = {
         bestAllClearStreak: 1,
         subjectStreaks: { 1: { current: 2, best: 5 }, 2: { current: 1, best: 3 }, 3: { current: 0, best: 2 }, 4: { current: 0, best: 1 } }
       },
+      curriculumData: [],
       nextId: 1000
     };
 
@@ -153,6 +161,17 @@ const AuthManager = {
     return { user: result.user };
   },
 
+  updateUser(updates) {
+    if (!this.currentUser) return;
+    Object.assign(this.currentUser, updates);
+    const users = SN_DB.getUsers();
+    const idx = users.findIndex(u => u.uid === this.currentUser.uid);
+    if (idx !== -1) {
+      users[idx] = this.currentUser;
+      SN_DB.saveUsers(users);
+    }
+  },
+
   logout() {
     this.currentUser = null;
     SN_DB.clearSession();
@@ -184,7 +203,10 @@ const AppData = {
   notes()        { return this.get().notes; },
   assignments()  { return this.get().assignments; },
   gradeItems()   { return this.get().gradeItems || (this.get().gradeItems = []); },
+  examReminders(){ return this.get().examReminders || (this.get().examReminders = []); },
   checklist()    { return this.get().checklistData || (this.get().checklistData = {}); },
   streaks()      { return this.get().streaks; },
+  curriculum()   { return this.get().curriculumData || (this.get().curriculumData = []); },
+  semesters()    { return this.get().userSemesters || (this.get().userSemesters = []); },
   nextId()       { return ++this.get().nextId; },
 };

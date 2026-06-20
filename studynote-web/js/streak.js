@@ -83,7 +83,7 @@ const StreakEngine = {
     const base = new Date(); base.setHours(0,0,0,0);
     for (let i = 0; i < 365; i++) {
       const d = new Date(base); d.setDate(d.getDate() - i);
-      const dk = d.toISOString().slice(0,10);
+      const dk = dateKey(d);
       if (predicate(dk)) count++;
       else break;
     }
@@ -96,19 +96,28 @@ const StreakEngine = {
     if (!el) return;
 
     const streaks = AppData.streaks();
-    const todayKey = new Date().toISOString().slice(0,10);
+    const todayKey = dateKey(new Date());
     const todayLevel = this.calcLevel(todayKey);
     const levelDef = this.LEVELS[todayLevel] || null;
 
     const currentStreak = streaks.currentStreak || 0;
     const allClearStreak = streaks.allClearStreak || 0;
 
+    // Pop the counter only when the streak actually grows
+    const grew = this._lastStreak != null && currentStreak > this._lastStreak;
+    this._lastStreak = currentStreak;
+
+    const widgetCls = [
+      todayLevel >= 4 ? 'streak-allclear' : '',
+      todayLevel >= 2 ? 'has-flame' : ''
+    ].filter(Boolean).join(' ');
+
     el.innerHTML = `
-      <div class="streak-widget ${todayLevel >= 4 ? 'streak-allclear' : ''}">
+      <div class="streak-widget ${widgetCls}">
         <div class="streak-flame-row">
           <span class="streak-main-icon">${todayLevel >= 1 ? this.LEVELS[Math.min(todayLevel,4)].icon : '💤'}</span>
           <div class="streak-info">
-            <div class="streak-count">${currentStreak} <span class="streak-unit">ngày</span></div>
+            <div class="streak-count${grew ? ' pop' : ''}">${currentStreak} <span class="streak-unit">ngày</span></div>
             <div class="streak-name">${levelDef ? levelDef.name : 'Chưa có task'}</div>
           </div>
         </div>
@@ -123,15 +132,16 @@ const StreakEngine = {
     if (!el) return;
 
     const streaks = AppData.streaks();
-    const subjects = AppData.subjects();
-    const todayKey = new Date().toISOString().slice(0,10);
+    // Only show progress for subjects in the currently selected semester.
+    const subjects = AppData.subjects().filter(s => !window.activeSemester || s.semester === window.activeSemester);
+    const todayKey = dateKey(new Date());
     const todayLevel = this.calcLevel(todayKey);
 
     // Last 7 days heatmap
     const days = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i);
-      const dk = d.toISOString().slice(0,10);
+      const dk = dateKey(d);
       const lv = streaks.daily?.[dk]?.level || 0;
       days.push({ dk, lv, isToday: i === 0 });
     }

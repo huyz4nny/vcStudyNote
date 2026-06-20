@@ -5,11 +5,17 @@
 /* ─ APP STATE ─ */
 let currentPage = 'dashboard';
 let editSubjectId = null, editNoteId = null, editAssignId = null;
-let activeSemester = '';
+// Single source of truth for the active semester, shared across all script files
+// (redesign.js, grades.js, ...). MUST live on `window` — a top-level `let` does
+// NOT create a window property, which left the notes/assignment filters reading
+// an always-undefined value and showing every subject regardless of semester.
+window.activeSemester = '';
 let checklistDate = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
 
 const today = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
-const dateKey = d => d.toISOString().slice(0, 10);
+// Local-date key "YYYY-MM-DD" (KHÔNG dùng toISOString vì nó theo UTC — với
+// múi giờ VN (UTC+7) sẽ lệch sang ngày hôm trước, làm sai key checklist/streak).
+const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
 
 const PRIORITY_LABELS = ['Thấp', 'Trung bình', 'Cao', 'Khẩn cấp'];
@@ -69,11 +75,27 @@ function showApp() {
 
   const u = AuthManager.currentUser;
   const initials = (u.displayName || u.username).split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  document.getElementById('userAvatar').textContent = initials;
+  const avatarEl = document.getElementById('userAvatar');
+  if (u.avatarData) {
+    avatarEl.textContent = '';
+    avatarEl.style.backgroundImage = `url(${u.avatarData})`;
+    avatarEl.style.color = 'transparent';
+  } else {
+    avatarEl.textContent = initials;
+    avatarEl.style.backgroundImage = 'none';
+    avatarEl.style.color = 'var(--text-1)';
+  }
   document.getElementById('userName').textContent = u.displayName || u.username;
   document.getElementById('userUni').textContent = u.university || '';
 
-  activeSemester = getMostRecentSemester();
+  // Restore the last selected semester (persisted per-user) so F5 doesn't reset it.
+  const savedSem = AppData.get().activeSemester;
+  const allSems = getSemesters();
+  window.activeSemester = (savedSem === '' || (savedSem && allSems.includes(savedSem)))
+    ? savedSem
+    : getMostRecentSemester();
+  ensureUserSemesters();
+  populateGlobalSemesterDropdown();
   setGreeting();
   populateFilters();
   renderSidebarSubjects();
@@ -81,9 +103,52 @@ function showApp() {
   renderSubjectPage();
   renderNotesPage();
   renderAssignmentsPage();
-  renderChecklistPage();
+  const lastPage = localStorage.getItem('sn_last_page') || 'dashboard';
+  showPage(lastPage);
   StreakEngine.renderWidget();
 }
+
+function populateGlobalSemesterDropdown() {
+  const sems = getSemesters();
+  const select = document.getElementById('globalActiveSemester');
+  if (!select) return;
+  select.innerHTML = '<option value="">-- Tất cả --</option>' + sems.map(s => `<option value="${esc(s)}" ${s === activeSemester ? 'selected' : ''}>${esc(semesterLabel(s))}</option>`).join('');
+}
+
+// Persist the active semester on the per-user data so a refresh (F5) keeps it.
+function persistActiveSemester() {
+  const d = AppData.get();
+  d.activeSemester = window.activeSemester;
+  AppData.save();
+}
+
+// Single entry point used by every semester selector. Sets the value, persists it,
+// keeps both semester dropdowns in sync, and refreshes all semester-dependent views.
+function applyActiveSemester(v) {
+  window.activeSemester = v;
+  // Keep the program's "current semester" flag in sync (saved by persistActiveSemester).
+  const program = AppData.semesters();
+  if (program.length) program.forEach(s => s.isCurrent = (s.code === v));
+  persistActiveSemester();
+
+  const g = document.getElementById('globalActiveSemester'); if (g) g.value = v;
+  const s = document.getElementById('semesterFilter'); if (s) s.value = v;
+  const label = document.getElementById('subjectSemesterLabel');
+  if (label) label.textContent = v ? `Kỳ ${semesterLabel(v)}` : 'Tất cả kỳ học';
+
+  populateFilters();
+  renderDashboard();
+  renderSidebarSubjects();
+  renderSubjectPage();
+  renderNotesPage();
+  renderAssignmentsPage();
+  renderChecklistPage();
+  if (typeof renderGradesPage === 'function') renderGradesPage();
+}
+
+window.setGlobalActiveSemester = function() {
+  applyActiveSemester(document.getElementById('globalActiveSemester').value);
+};
 
 function switchAuthTab(tab) {
   document.getElementById('panelLogin').hidden = tab !== 'login';
@@ -130,8 +195,13 @@ function doRegister(e) {
   showApp();
 }
 
-function doLogout() {
-  if (!confirm('Đăng xuất khỏi StudyNote?')) return;
+async function doLogout() {
+  if (!await uiConfirm({
+    title: 'Đăng xuất',
+    message: 'Bạn có chắc muốn đăng xuất khỏi StudyNote?',
+    confirmText: 'Đăng xuất',
+    icon: 'ph-sign-out'
+  })) return;
   AuthManager.logout();
   AppData._cache = null;
   showAuthScreen();
@@ -166,11 +236,21 @@ function initNav() {
 
 function showPage(name) {
   currentPage = name;
-  const titles = { dashboard: 'Tổng quan', subjects: 'Môn học', notes: 'Ghi chú', assignments: 'Bài tập', checklist: 'Hôm nay' };
+  localStorage.setItem('sn_last_page', name);
+  const titles = { dashboard: 'Tổng quan', subjects: 'Môn học', notes: 'Ghi chú', assignments: 'Bài tập', checklist: 'Hôm nay', grades: 'Bảng điểm', curriculum: 'Chương trình học', program: 'Chương trình của tôi' };
   document.getElementById('topbarHeading').textContent = titles[name] || name;
   document.querySelectorAll('.page').forEach(p => { p.classList.remove('active'); p.hidden = true; });
   const pg = document.getElementById(`page-${name}`);
   pg.hidden = false;
+  if (name === 'grades' && typeof renderGradesPage === 'function') {
+    renderGradesPage();
+  }
+  if (name === 'curriculum' && typeof renderCurriculumPage === 'function') {
+    renderCurriculumPage();
+  }
+  if (name === 'program' && typeof renderProgramPage === 'function') {
+    renderProgramPage();
+  }
   requestAnimationFrame(() => pg.classList.add('active'));
   document.querySelectorAll('.nav-item').forEach(l => { l.classList.remove('active'); l.removeAttribute('aria-current'); });
   const nl = document.getElementById(`nav-${name}`);
@@ -269,10 +349,20 @@ function renderDashboard() {
   const done = todayTasks.filter(t => t.isDone).length;
   const total = todayTasks.length;
   const pct = total ? Math.round(done / total * 100) : 0;
-  const pending = AppData.assignments().filter(a => a.status !== 2).length;
 
-  document.getElementById('stat-subj').textContent = AppData.subjects().filter(s => s.semester === activeSemester || !activeSemester).length;
-  document.getElementById('stat-notes').textContent = AppData.notes().length;
+  // Subjects belonging to the active semester (all subjects if none selected).
+  // Notes/assignments are scoped to these so the dashboard matches the pages.
+  const activeSubjIds = AppData.subjects()
+    .filter(s => !activeSemester || s.semester === activeSemester)
+    .map(s => s.id);
+  const inSemester = item => !item.subjectId || activeSubjIds.includes(item.subjectId);
+
+  const semesterAssignments = AppData.assignments().filter(inSemester);
+  const semesterNotes = AppData.notes().filter(inSemester);
+  const pending = semesterAssignments.filter(a => a.status !== 2).length;
+
+  document.getElementById('stat-subj').textContent = activeSubjIds.length;
+  document.getElementById('stat-notes').textContent = semesterNotes.length;
   document.getElementById('stat-assign').textContent = pending;
   document.getElementById('stat-done').textContent = done;
   document.getElementById('stat-total').textContent = total;
@@ -281,7 +371,7 @@ function renderDashboard() {
   document.getElementById('semesterTag').textContent = activeSemester || 'Tất cả';
 
   // Deadlines
-  const sorted = [...AppData.assignments()].filter(a => a.status !== 2 && a.deadline).sort((a, b) => new Date(a.deadline) - new Date(b.deadline)).slice(0, 5);
+  const sorted = semesterAssignments.filter(a => a.status !== 2 && a.deadline).sort((a, b) => new Date(a.deadline) - new Date(b.deadline)).slice(0, 5);
   document.getElementById('deadlineList').innerHTML = sorted.length
     ? sorted.map(a => {
       const sub = AppData.subjects().find(s => s.id === a.subjectId);
@@ -319,41 +409,85 @@ function renderDashboard() {
     </div>`;
   }).join('');
 
+  ExamModule.renderDashboardAlerts();
   StreakEngine.renderDashboardSection();
   StreakEngine.renderWidget();
 }
 
 function deadlineMeta(dl) {
   if (!dl) return { cls: 'ok', label: 'Không hạn' };
-  const diff = (new Date(dl) - new Date()) / 86400000;
+  const d = new Date(dl + 'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  const diff = Math.round((d - now) / 86400000);
+  
   if (diff < 0) return { cls: 'overdue', label: 'Quá hạn' };
-  if (diff <= 1) return { cls: 'near', label: 'Hôm nay' };
-  if (diff <= 3) return { cls: 'near', label: `${Math.ceil(diff)} ngày` };
-  return { cls: 'ok', label: `${Math.ceil(diff)} ngày` };
+  if (diff === 0) return { cls: 'near', label: 'Hôm nay' };
+  if (diff === 1) return { cls: 'near', label: 'Ngày mai' };
+  if (diff <= 3) return { cls: 'near', label: `Còn ${diff} ngày` };
+  return { cls: 'ok', label: `Còn ${diff} ngày` };
 }
 
 /* ─ SEMESTER ─ */
-function getMostRecentSemester() {
-  const sems = [...new Set(AppData.subjects().map(s => s.semester).filter(Boolean))].sort().reverse();
-  return sems[0] || '';
+// Distinct semester codes actually used by subjects (newest first).
+function derivedSemesters() {
+  return [...new Set(AppData.subjects().map(s => s.semester).filter(Boolean))].sort().reverse();
 }
 
+function getMostRecentSemester() {
+  return derivedSemesters()[0] || '';
+}
+
+// Ordered list of semester codes: the user's "Chương trình của tôi" order first,
+// then any subject semesters not yet registered. Falls back to derived if no program.
 function getSemesters() {
-  return [...new Set(AppData.subjects().map(s => s.semester).filter(Boolean))].sort().reverse();
+  const program = AppData.semesters();
+  const derived = derivedSemesters();
+  if (!program.length) return derived;
+  const ordered = [...program].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map(s => s.code);
+  derived.forEach(code => { if (!ordered.includes(code)) ordered.push(code); });
+  return ordered;
+}
+
+// Display name for a semester code: the user's label if set, else the code itself.
+function semesterLabel(code) {
+  if (!code) return 'Tất cả';
+  const s = AppData.semesters().find(x => x.code === code);
+  return (s && s.label) ? s.label : code;
+}
+
+// Ensure the userSemesters store exists; backfill once from subjects + legacy aliases.
+// Single source of truth for the semester LIST; subject→semester stays on subject.semester.
+function ensureUserSemesters() {
+  const data = AppData.get();
+  if (!data.userSemesters) data.userSemesters = [];
+  const program = data.userSemesters;
+  const aliases = data.semesterAliases || {};
+  // Register any subject semester not yet in the program (oldest first so the
+  // list reads chronologically: smaller order = earlier semester).
+  const chrono = derivedSemesters().reverse();
+  chrono.forEach(code => {
+    if (!program.some(s => s.code === code)) {
+      program.push({ code, label: aliases[code] || '', order: program.length, isCurrent: false });
+    }
+  });
+  // Guarantee exactly one current semester.
+  if (program.length && !program.some(s => s.isCurrent)) {
+    const want = window.activeSemester || getMostRecentSemester();
+    const target = program.find(s => s.code === want) || program[0];
+    if (target) target.isCurrent = true;
+  }
+  AppData.save();
 }
 
 function renderSemesterFilter() {
   const sems = getSemesters();
   const el = document.getElementById('semesterFilter');
-  el.innerHTML = '<option value="">Tất cả kỳ</option>' + sems.map(s => `<option value="${esc(s)}" ${s === activeSemester ? 'selected' : ''}>${esc(s)}</option>`).join('');
-  document.getElementById('subjectSemesterLabel').textContent = activeSemester ? `Kỳ ${activeSemester}` : 'Tất cả kỳ học';
+  el.innerHTML = '<option value="">Tất cả kỳ</option>' + sems.map(s => `<option value="${esc(s)}" ${s === activeSemester ? 'selected' : ''}>${esc(semesterLabel(s))}</option>`).join('');
+  document.getElementById('subjectSemesterLabel').textContent = activeSemester ? `Kỳ ${semesterLabel(activeSemester)}` : 'Tất cả kỳ học';
 }
 
 function onSemesterChange() {
-  activeSemester = document.getElementById('semesterFilter').value;
-  document.getElementById('subjectSemesterLabel').textContent = activeSemester ? `Kỳ ${activeSemester}` : 'Tất cả kỳ học';
-  renderSubjectPage();
-  renderDashboard();
+  applyActiveSemester(document.getElementById('semesterFilter').value);
 }
 
 function openAddSemesterModal() { openModal('semesterModal'); }
@@ -361,13 +495,28 @@ function openAddSemesterModal() { openModal('semesterModal'); }
 function addNewSemester() {
   const code = document.getElementById('newSemesterCode').value.trim().toUpperCase();
   if (!code) return;
-  activeSemester = code;
+  
+  const sems = AppData.semesters();
+  if (!sems.find(s => s.code === code)) {
+    sems.push({ code: code, label: '', order: sems.length, isCurrent: false });
+    AppData.save();
+  }
+
+  window.activeSemester = code;
+  persistActiveSemester();
   closeModal('semesterModal');
+  
   // Just switching to a new semester — subjects will be added with this semester code
-  renderSemesterFilter();
+  if (typeof programRefreshAll === 'function') {
+    programRefreshAll();
+  } else {
+    renderSemesterFilter();
+  }
+  
   toast(`Kỳ ${code} đã sẵn sàng — thêm môn học cho kỳ này`);
-  openSubjectEdit();
-  document.getElementById('sSemester').value = code;
+  if (typeof openMultiSubjectModal === 'function') {
+    openMultiSubjectModal(code);
+  }
 }
 
 /* ─ SUBJECTS ─ */
@@ -387,7 +536,9 @@ function renderSubjectPage() {
     const sd = sa.filter(a => a.status === 2).length;
     const gi = AppData.gradeItems().filter(g => g.subjectId === s.id);
     const scored = gi.filter(g => g.value !== null);
-    const ws = scored.reduce((sum, g) => sum + g.value * g.weight / 10, 0);
+    // Weighted total out of 10 — weight is a percentage, so divide by 100
+    // (matches the calculation in grades.js). Previously /10 inflated GPA 10×.
+    const ws = scored.reduce((sum, g) => sum + g.value * (g.weight / 100), 0);
     return `<div class="subject-card" role="listitem">
       <div class="sc-bar" style="background:${s.colorHex}"></div>
       <div class="sc-body">
@@ -397,7 +548,7 @@ function renderSubjectPage() {
         </div>
         <div class="sc-meta">
           <div class="sc-meta-row"><i class="ph ph-user"></i>${esc(s.lecturer || '—')}</div>
-          <div class="sc-meta-row"><i class="ph ph-certificate"></i>${s.credits} tín chỉ · ${esc(s.semester)}</div>
+          <div class="sc-meta-row"><i class="${s.credits ? 'ph ph-certificate' : 'ph ph-calendar'}"></i>${s.credits ? `${s.credits} tín chỉ · ` : ''}${esc(s.semester)}</div>
           ${gi.length ? `<div class="sc-meta-row"><i class="ph ph-exam"></i>GPA hiện tại: <strong style="color:${s.colorHex}">${ws.toFixed(2)}/10</strong> (${scored.length}/${gi.length} mục)</div>` : ''}
         </div>
         <div class="sc-stats">
@@ -423,11 +574,16 @@ function openSubjectEdit(id = null) {
   document.getElementById('sCode').value = s.code || '';
   document.getElementById('sLecturer').value = s.lecturer || '';
   document.getElementById('sCredits').value = s.credits || 3;
-  document.getElementById('sSemester').value = s.semester || activeSemester || 'SU2026';
+  document.getElementById('sSemester').value = s.semester || window.activeSemester || 'SU2026';
   document.getElementById('sColor').value = s.colorHex || '#10b981';
   document.getElementById('sPassThresh').value = s.passThreshold ?? 5;
+  document.getElementById('sCountGPA').checked = s.isCountedInGPA !== false;
+  document.getElementById('sStatusOverride').value = s.statusOverride || '';
+  
+  
   openModal('subjectModal');
 }
+
 
 function saveSubject(e) {
   e.preventDefault();
@@ -439,6 +595,8 @@ function saveSubject(e) {
     semester: document.getElementById('sSemester').value.trim(),
     colorHex: document.getElementById('sColor').value,
     passThreshold: +document.getElementById('sPassThresh').value,
+    isCountedInGPA: document.getElementById('sCountGPA').checked,
+    statusOverride: document.getElementById('sStatusOverride').value,
     isActive: true
   };
   if (editSubjectId) {
@@ -453,8 +611,12 @@ function saveSubject(e) {
   renderSubjectPage(); renderSidebarSubjects(); renderDashboard(); populateFilters();
 }
 
-function deleteSubject(id) {
-  if (!confirm('Xóa môn này? Ghi chú và bài tập liên quan cũng sẽ bị xóa.')) return;
+async function deleteSubject(id) {
+  if (!await uiConfirm({
+    title: 'Xóa môn học',
+    message: 'Xóa môn này? Ghi chú, bài tập và bảng điểm liên quan cũng sẽ bị xóa.',
+    confirmText: 'Xóa', danger: true, icon: 'ph-trash'
+  })) return;
   const data = AppData.get();
   data.subjects = data.subjects.filter(s => s.id !== id);
   data.notes = data.notes.filter(n => n.subjectId !== id);
@@ -467,10 +629,14 @@ function deleteSubject(id) {
 
 /* ─ FILTERS ─ */
 function populateFilters() {
-  const opts = AppData.subjects().map(s => `<option value="${s.id}">${esc(s.code)} — ${esc(s.name)}</option>`).join('');
+  let list = AppData.subjects();
+  if (window.activeSemester) {
+    list = list.filter(s => s.semester === window.activeSemester);
+  }
+  const opts = list.map(s => `<option value="${s.id}">${esc(s.code)} — ${esc(s.name)}</option>`).join('');
   ['noteSubjectFilter', 'assignSubjectFilter'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
-    el.innerHTML = `<option value="">Tất cả môn</option>${opts}`;
+    el.innerHTML = `<option value="">Tất cả môn (Kỳ hiện tại)</option>${opts}`;
   });
   ['nSubject', 'aSubject'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
@@ -488,7 +654,17 @@ function filterNotes() {
   const sid = +document.getElementById('noteSubjectFilter').value || null;
   const tag = document.getElementById('noteTagFilter').value;
   const kw = document.getElementById('noteSearch').value.toLowerCase();
+  
+  // Get active subjects
+  const activeSubjIds = AppData.subjects()
+    .filter(s => !window.activeSemester || s.semester === window.activeSemester)
+    .map(s => s.id);
+    
   let list = [...AppData.notes()];
+  // Filter out notes from other semesters unless specifically requested (which is not possible via dropdown anymore)
+  // We keep notes with no subject assigned (subjectId=null) visible across all semesters
+  list = list.filter(n => !n.subjectId || activeSubjIds.includes(n.subjectId));
+
   if (sid) list = list.filter(n => n.subjectId === sid);
   if (tag) list = list.filter(n => n.tag === tag);
   if (kw) list = list.filter(n => n.title.toLowerCase().includes(kw) || (n.content || '').toLowerCase().includes(kw));
@@ -554,8 +730,8 @@ function togglePin(id) {
   AppData.save(); filterNotes(); toast(n.isPinned ? 'Đã ghim' : 'Đã bỏ ghim');
 }
 
-function deleteNote(id) {
-  if (!confirm('Xóa ghi chú này?')) return;
+async function deleteNote(id) {
+  if (!await uiConfirm({ title: 'Xóa ghi chú', message: 'Xóa ghi chú này?', confirmText: 'Xóa', danger: true, icon: 'ph-trash' })) return;
   const n = AppData.notes(); n.splice(n.findIndex(x => x.id === id), 1);
   AppData.save(); filterNotes(); renderDashboard(); toast('Đã xóa ghi chú');
 }
@@ -565,12 +741,19 @@ function renderAssignmentsPage() { populateFilters(); filterAssignments(); }
 
 function filterAssignments() {
   const sid = +document.getElementById('assignSubjectFilter').value || null;
-  const st = document.getElementById('assignStatusFilter').value;
+  const status = document.getElementById('assignStatusFilter').value;
   const pr = document.getElementById('assignPriorityFilter').value;
   const sort = document.getElementById('assignSortFilter').value;
+  
+  const activeSubjIds = AppData.subjects()
+    .filter(s => !window.activeSemester || s.semester === window.activeSemester)
+    .map(s => s.id);
+    
   let list = [...AppData.assignments()];
+  list = list.filter(a => !a.subjectId || activeSubjIds.includes(a.subjectId));
+  
   if (sid) list = list.filter(a => a.subjectId === sid);
-  if (st !== '') list = list.filter(a => a.status === +st);
+  if (status !== '') list = list.filter(a => a.status === +status);
   if (pr !== '') list = list.filter(a => a.priority === +pr);
   list.sort((a, b) => { const da = a.deadline ? new Date(a.deadline) : new Date(9999, 0); const db = b.deadline ? new Date(b.deadline) : new Date(9999, 0); return sort === 'asc' ? da - db : db - da; });
 
@@ -604,7 +787,6 @@ function filterAssignments() {
 function cycleStatus(id) {
   const a = AppData.assignments().find(x => x.id === id); a.status = (a.status + 1) % 3;
   AppData.save(); filterAssignments(); renderDashboard();
-  document.getElementById('assignBadge').textContent = AppData.assignments().filter(a => a.status !== 2).length;
   toast(`Trạng thái: ${STATUS_LABELS[a.status]}`);
 }
 
@@ -632,8 +814,8 @@ function saveAssignment(e) {
   document.getElementById('assignBadge').textContent = AppData.assignments().filter(a => a.status !== 2).length;
 }
 
-function deleteAssignment(id) {
-  if (!confirm('Xóa bài tập này?')) return;
+async function deleteAssignment(id) {
+  if (!await uiConfirm({ title: 'Xóa bài tập', message: 'Xóa bài tập này?', confirmText: 'Xóa', danger: true, icon: 'ph-trash' })) return;
   const as = AppData.assignments(); as.splice(as.findIndex(a => a.id === id), 1);
   AppData.save(); filterAssignments(); renderDashboard(); toast('Đã xóa bài tập');
 }
@@ -753,9 +935,18 @@ function copyYesterday() {
   if (!notDone.length) { toast('Không có task chưa xong từ hôm qua'); return; }
   const key = dateKey(checklistDate);
   if (!cl[key]) cl[key] = [];
+  
+  // So sánh content và quy về null cho subjectId để so sánh chính xác kể cả undefined
+  const toCopy = notDone.filter(t => !cl[key].some(todayT => 
+    todayT.content === t.content && 
+    (todayT.subjectId || null) === (t.subjectId || null)
+  ));
+  
+  if (!toCopy.length) { toast('Đã copy rồi'); return; }
+
   let maxOrder = cl[key].reduce((m, t) => Math.max(m, t.sortOrder), -1);
-  notDone.forEach(t => cl[key].push({ id: AppData.nextId(), content: t.content, isDone: false, sortOrder: ++maxOrder, subjectId: t.subjectId || null, completedAt: null }));
-  AppData.save(); renderChecklistPage(); renderDashboard(); toast(`Đã copy ${notDone.length} task từ hôm qua`);
+  toCopy.forEach(t => cl[key].push({ id: AppData.nextId(), content: t.content, isDone: false, sortOrder: ++maxOrder, subjectId: t.subjectId || null, completedAt: null }));
+  AppData.save(); renderChecklistPage(); renderDashboard(); toast(`Đã copy ${toCopy.length} task từ hôm qua`);
 }
 
 function changeDay(delta) { checklistDate = addDays(checklistDate, delta); renderChecklistPage(); }
@@ -788,13 +979,104 @@ function saveDragOrder() {
 /* ─ MODALS ─ */
 function openModal(id) { const el = document.getElementById(id); el.classList.add('open'); el.querySelector('input,select,textarea')?.focus(); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open')); });
+function toggleMobileSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+let _alertResolve = null;
+window.uiAlert = function({ title = 'Thông báo', message = '', icon = 'ph-info' } = {}) {
+  // If it's called with string message, e.g. uiAlert('Hello')
+  if (typeof arguments[0] === 'string') {
+    message = arguments[0];
+  }
+  return new Promise(resolve => {
+    _alertResolve = resolve;
+    document.getElementById('customAlertTitle').innerHTML = `<i class="ph-fill ${icon}"></i> ${title}`;
+    document.getElementById('customAlertMessage').innerHTML = message.replace(/\n/g, '<br>');
+    const btn = document.getElementById('customAlertBtn');
+    btn.onclick = () => {
+      closeModal('customAlertModal');
+      const r = _alertResolve; _alertResolve = null;
+      if (r) r();
+    };
+    openModal('customAlertModal');
+    btn.focus();
+  });
+};
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  // A pending confirm dialog must resolve (as cancel) before it's hidden
+  if (document.getElementById('confirmModal').classList.contains('open')) { _confirmResolveAndClose(false); return; }
+  if (document.getElementById('promptModal')?.classList.contains('open')) { _promptResolveAndClose(null); return; }
+  document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+});
+
+/* ─ CONFIRM DIALOG ─ (thay cho confirm() mặc định) */
+let _confirmResolve = null;
+function uiConfirm({ title = 'Xác nhận', message = '', confirmText = 'Xác nhận', cancelText = 'Huỷ', danger = false, icon } = {}) {
+  return new Promise(resolve => {
+    _confirmResolve = resolve;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMessage').textContent = message;
+    const ok = document.getElementById('confirmOkBtn');
+    ok.textContent = confirmText;
+    ok.className = danger ? 'btn-danger' : 'btn-primary';
+    document.getElementById('confirmCancelBtn').textContent = cancelText;
+    const ic = document.getElementById('confirmIcon');
+    ic.className = 'confirm-icon ' + (danger ? 'is-danger' : 'is-info');
+    ic.innerHTML = `<i class="ph-fill ${icon || (danger ? 'ph-warning' : 'ph-question')}"></i>`;
+    openModal('confirmModal');
+    ok.focus();
+  });
+}
+function _confirmResolveAndClose(val) {
+  closeModal('confirmModal');
+  const r = _confirmResolve; _confirmResolve = null;
+  if (r) r(val);
+}
+
+/* ─ PROMPT DIALOG ─ (thay cho prompt() mặc định) */
+let _promptResolve = null;
+function uiPrompt({ title = 'Nhập', message = '', value = '', placeholder = '', confirmText = 'Lưu', icon = 'ph-pencil-simple' } = {}) {
+  return new Promise(resolve => {
+    _promptResolve = resolve;
+    document.getElementById('promptTitle').textContent = title;
+    const msg = document.getElementById('promptMessage');
+    msg.innerHTML = message ? esc(message).replace(/\n/g, '<br>') : '';
+    msg.style.display = message ? '' : 'none';
+    const input = document.getElementById('promptInput');
+    input.value = value || '';
+    input.placeholder = placeholder || '';
+    document.getElementById('promptOkBtn').textContent = confirmText;
+    document.getElementById('promptIcon').innerHTML = `<i class="ph-fill ${icon}"></i>`;
+    openModal('promptModal');
+    input.focus(); input.select();
+  });
+}
+function _promptResolveAndClose(val) {
+  closeModal('promptModal');
+  const r = _promptResolve; _promptResolve = null;
+  // null = huỷ. Chuỗi (kể cả rỗng) = người dùng xác nhận.
+  if (r) r(val === null ? null : String(val).trim());
+}
+window.uiPrompt = uiPrompt;
 
 /* ─ TOAST ─ */
 let toastT;
-function toast(msg) {
+const TOAST_ICONS = {
+  success: 'ph-check-circle',
+  info: 'ph-info',
+  warn: 'ph-warning',
+  error: 'ph-x-circle',
+};
+function toast(msg, type = 'success') {
   const el = document.getElementById('toast');
   document.getElementById('toastMsg').textContent = msg;
+  const ic = el.querySelector('.toast-icon');
+  if (ic) ic.className = `ph-fill ${TOAST_ICONS[type] || TOAST_ICONS.success} toast-icon`;
+  el.classList.remove('toast-success', 'toast-info', 'toast-warn', 'toast-error');
+  el.classList.add(`toast-${TOAST_ICONS[type] ? type : 'success'}`);
   el.classList.add('show');
   clearTimeout(toastT);
   toastT = setTimeout(() => el.classList.remove('show'), 2600);
@@ -805,3 +1087,74 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 function tagChipClass(tag) { return { 'lưu-ý': 'chip-luu-y', 'lý-thuyết': 'chip-ly-thuyet', 'đề-cương': 'chip-de-cuong', 'khác': 'chip-khac' }[tag] || 'chip-khac'; }
 function tagLabel(tag) { return { 'lưu-ý': 'Lưu ý', 'lý-thuyết': 'Lý thuyết', 'đề-cương': 'Đề cương', 'khác': 'Khác' }[tag] || tag; }
 function emptyState(icon, title, sub) { return `<div class="empty-state"><i class="${icon}"></i><p>${esc(title)}</p><span>${esc(sub)}</span></div>`; }
+let tempAvatarData = null;
+
+function openProfileModal() {
+  const u = AuthManager.currentUser;
+  if (!u) return;
+  document.getElementById('pName').value = u.displayName || u.username;
+  document.getElementById('pUni').value = u.university || '';
+  
+  tempAvatarData = u.avatarData || null;
+  const preview = document.getElementById('pAvatarPreview');
+  if (tempAvatarData) {
+    preview.textContent = '';
+    preview.style.backgroundImage = `url(${tempAvatarData})`;
+  } else {
+    const initials = (u.displayName || u.username).split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    preview.textContent = initials;
+    preview.style.backgroundImage = 'none';
+  }
+  openModal('profileModal');
+}
+
+function handleAvatarSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    tempAvatarData = evt.target.result;
+    const preview = document.getElementById('pAvatarPreview');
+    preview.textContent = '';
+    preview.style.backgroundImage = `url(${tempAvatarData})`;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveProfile() {
+  const name = document.getElementById('pName').value.trim();
+  const uni = document.getElementById('pUni').value.trim();
+  if (!name) {
+    toast('Tên hiển thị không được để trống', 'error');
+    return;
+  }
+  
+  AuthManager.updateUser({
+    displayName: name,
+    university: uni,
+    avatarData: tempAvatarData
+  });
+  
+  // Refresh UI
+  const u = AuthManager.currentUser;
+  const avatarEl = document.getElementById('userAvatar');
+  if (u.avatarData) {
+    avatarEl.textContent = '';
+    avatarEl.style.backgroundImage = `url(${u.avatarData})`;
+    avatarEl.style.color = 'transparent';
+  } else {
+    const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    avatarEl.textContent = initials;
+    avatarEl.style.backgroundImage = 'none';
+    avatarEl.style.color = 'var(--text-1)';
+  }
+  document.getElementById('userName').textContent = name;
+  document.getElementById('userUni').textContent = uni;
+  
+  closeModal('profileModal');
+  toast('Cập nhật thông tin thành công');
+}
+
+function openDonateModal() {
+  openModal('donateModal');
+}
