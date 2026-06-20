@@ -1,17 +1,21 @@
 <div align="center">
 
-# 🎓 StudyNote
+# 🎓 StudyNote (Fullstack Version)
 
-### Ứng dụng web quản lý học tập cá nhân dành cho sinh viên
+### Ứng dụng quản lý học tập cá nhân toàn diện dành cho sinh viên
 
-*Ghi chú theo môn · Theo dõi deadline · Checklist hằng ngày · Chuỗi streak gamification · Tính điểm GPA*
+*Ghi chú theo môn · Theo dõi deadline · Checklist hằng ngày · Hệ thống Gamification · Tính điểm GPA*
 
 <br />
 
+![.NET](https://img.shields.io/badge/.NET_10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black)
+<br />
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
-![LocalStorage](https://img.shields.io/badge/Storage-localStorage-4CAF50?style=for-the-badge)
+![Cloudflare](https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=Cloudflare&logoColor=white)
 
 <br />
 
@@ -23,85 +27,105 @@
 
 ## 📖 Giới thiệu dự án
 
-**StudyNote** là một ứng dụng web dạng *Single-Page Application (SPA)* được thiết kế nhằm giúp các bạn sinh viên tổ chức việc học một cách trực quan, tối ưu và tràn đầy động lực. 
+**StudyNote** là một ứng dụng Web Fullstack được thiết kế để giúp sinh viên tổ chức việc học trực quan, tối ưu và tràn đầy động lực. Khác biệt với các ứng dụng To-do list thông thường, StudyNote tập trung mạnh vào **Gamification** (Tạo động lực bằng hệ thống Streak), **Đặc thù sinh viên** (Quản lý môn học, tín chỉ, tính điểm GPA) và trải nghiệm người dùng cực kỳ mượt mà.
 
-Dự án hiện đang ở giai đoạn **Frontend hoàn chỉnh**, mọi dữ liệu được lưu trữ siêu tốc và an toàn ngay trên trình duyệt thông qua `localStorage`. Khác biệt với các ứng dụng To-do list thông thường, StudyNote tập trung mạnh vào **Gamification** (Tạo động lực bằng hệ thống Streak) và **Đặc thù sinh viên** (Quản lý môn học, tín chỉ, tính điểm GPA).
-
-> 🌐 **Thông tin Triển khai (Deployment):**
-> - **Tên miền (Domain):** `huyz4nny.xyz` (Được đăng ký và quản lý tại **Nhân Hòa**).
-> - **Máy chủ (Hosting):** Được lưu trữ và triển khai thông qua dịch vụ **SmarterASP.NET** (Gói Trial).
-> - **CI/CD:** Đồng bộ và cập nhật mã nguồn hoàn toàn tự động nhờ tính năng **GitHub Deployment** của SmarterASP.NET.
+Ở phiên bản mới nhất, hệ thống đã được nâng cấp hoàn chỉnh từ LocalStorage lên **Backend API chuyên nghiệp**, cho phép dữ liệu được đồng bộ liên tục, xác thực bảo mật qua JWT và lưu trữ an toàn trên Database thực tế.
 
 ---
 
-## ✨ Tính năng nổi bật
+## 🏗️ Kiến trúc Hệ thống & Ngăn xếp Công nghệ (Tech Stack)
+
+Dự án áp dụng mô hình kiến trúc **Monolithic** nhúng Frontend vào Backend trong quá trình triển khai (Publish) để tối ưu hóa tài nguyên server (chạy chung trên 1 Host).
+
+### 🖥️ Backend (API Server)
+- **Framework:** .NET 10 (ASP.NET Core Web API).
+- **Cơ sở dữ liệu:** SQLite thông qua **Entity Framework Core** (Code-First Migration).
+- **Bảo mật & Xác thực:** JWT (JSON Web Tokens) kết hợp với **ASP.NET Core Identity** để mã hóa mật khẩu và quản lý phiên đăng nhập.
+- **Tài liệu API:** Tích hợp sẵn Swagger UI (`/swagger`).
+
+### 🎨 Frontend (Client-side)
+- **Công nghệ lõi:** HTML5, CSS3, JavaScript ES6+ (Vanilla JS).
+- **Tương tác API:** Custom Fetch Wrapper (`api.js`) xử lý tự động đính kèm Token và Refresh/Logout khi hết hạn.
+- **Giao diện:** Responsive Design, Micro-interactions (Hiệu ứng hover, transition), không phụ thuộc vào Framework nặng nề.
+
+### 🚀 Hạ tầng & CI/CD
+- **Tên miền (Domain):** Được cung cấp bởi **Nhân Hòa**.
+- **Quản lý DNS & Bảo mật mạng:** **Cloudflare** (SSL/TLS, Proxy, DDoS Protection).
+- **Hosting / Máy chủ:** **SmarterASP.NET**.
+- **CI/CD (Continuous Deployment):** Tự động hóa qua hệ thống kéo mã nguồn từ GitHub của SmarterASP.NET.
+
+---
+
+## ✨ Tính năng cốt lõi
 
 | Module | Chi tiết tính năng |
 |--------|--------------------|
-| 🔐 **Xác thực người dùng** | Đăng ký & Đăng nhập mượt mà. Hệ thống tự động mã hóa mật khẩu, phân chia không gian làm việc (workspace) riêng biệt cho từng tài khoản trên cùng một thiết bị. |
-| 📚 **Quản lý Môn học** | Lưu trữ thông tin chi tiết: Tên môn, Mã môn, Giảng viên, Số tín chỉ, Phân loại theo Học kỳ và gắn Màu sắc nhận diện riêng biệt. |
-| 📝 **Smart Notes** | Hệ thống ghi chú thông minh gắn liền với môn học. Hỗ trợ phân loại qua tag (*lưu ý / lý thuyết / đề cương*), ghim nội dung quan trọng lên đầu, tìm kiếm nhanh và lọc thông tin. |
-| 📋 **Deadline Tracker** | Theo dõi bài tập theo mức độ ưu tiên (Thấp → Khẩn cấp). Huy hiệu (badge) cảnh báo tự động khi deadline sắp đến hoặc đã quá hạn. |
-| ✅ **Checklist & To-do** | Bảng công việc mỗi ngày với khả năng kéo-thả (Drag & Drop) siêu nhạy, thanh tiến độ trực quan và khả năng xem lại lịch sử các ngày trước đó. |
-| 🔥 **Streak Engine** | **Gamification cốt lõi:** Hệ thống tính điểm chuỗi ngày học liên tục với **4 cấp độ** (Khởi động, Chăm chỉ, Đa môn, ALL CLEAR) kèm hiệu ứng ăn mừng pháo hoa đẹp mắt nhằm duy trì thói quen học tập. |
-| 🎯 **Bộ máy GPA (Tính điểm)**| Theo dõi đa dạng các cột điểm theo trọng số (Lab 20%, Assignment 30%, Final 50%). Tự động cảnh báo môn học có nguy cơ rớt hoặc tính điểm trung bình tích lũy. |
-| 📊 **Dashboard Tổng quan** | Giao diện Control Panel hiện đại thống kê toàn bộ tiến độ: số môn đang học, deadline sắp cháy, số ghi chú, chuỗi streak hiện tại. |
+| 🔐 **Identity & Security** | Đăng ký & Đăng nhập thông qua API. Hệ thống bảo vệ Route, phân quyền người dùng riêng biệt nhờ JWT. |
+| 📚 **Quản lý Môn học** | Lưu trữ thông tin chi tiết: Tên môn, Mã môn, Giảng viên, Số tín chỉ, Phân loại theo Học kỳ và màu sắc nhận diện. |
+| 📝 **Smart Notes** | Hệ thống ghi chú thông minh gắn liền với môn học. Hỗ trợ phân loại qua tag (*lưu ý / lý thuyết / đề cương*), ghim nội dung lên đầu. |
+| 📋 **Deadline Tracker** | Theo dõi bài tập theo mức độ ưu tiên (Thấp → Khẩn cấp). Huy hiệu cảnh báo tự động trạng thái (Chưa làm, Đang làm, Hoàn thành). |
+| ✅ **Checklist Hôm nay** | Bảng công việc mỗi ngày đồng bộ Server. Nút copy thông minh: Tự động sao chép các task chưa hoàn thành của ngày hôm qua sang hôm nay. |
+| 🔥 **Streak Engine** | **Gamification:** Hệ thống tính điểm chuỗi ngày học liên tục với hiệu ứng pháo hoa nhằm duy trì thói quen học tập mỗi ngày. |
+| 🎯 **Bộ máy GPA** | Tính điểm GPA tự động theo chuẩn đại học (FPT) thông qua tính toán trọng số các cột điểm thành phần. |
 
 ---
 
-## 🏗️ Ngăn xếp Công nghệ (Tech Stack)
+## 🛠️ Hướng dẫn Triển khai Lên Internet (Deploy to Production)
 
-Dự án được xây dựng hoàn toàn bằng các công nghệ nền tảng, không phụ thuộc vào framework nặng nề, đảm bảo tốc độ phản hồi tính bằng mili-giây:
+Quá trình đưa StudyNote lên Internet được tự động hóa tối đa bằng tính năng GitHub Deployment.
 
-- **Frontend:** HTML5, CSS3, JavaScript ES6+ (Vanilla JS).
-- **Cơ sở dữ liệu:** Browser `localStorage` (API lưu trữ cục bộ).
-- **Kiến trúc UI/UX:** Responsive Design, Micro-interactions (Hiệu ứng hover, transition), DOM Manipulation.
-- **Hạ tầng mạng:** 
-  - Domain cung cấp bởi **Nhân Hòa**.
-  - Hosting cung cấp bởi **SmarterASP.NET**.
-- **Công cụ hỗ trợ:** 
-  - Icon: [Phosphor Icons](https://phosphoricons.com/)
-  - Font chữ: Google Fonts (Inter/Roboto).
+### Bước 1: Cấu hình DNS trên Cloudflare
+1. Đăng ký tên miền (VD: `huyz4nny.xyz`) tại Nhân Hòa và trỏ **Nameserver** về Cloudflare.
+2. Tại Cloudflare, vào mục **DNS > Records**:
+   - Thêm bản ghi `A`, Name là `@`, IP là **IP của Hosting SmarterASP.NET**.
+   - Bật đám mây màu cam (Proxied) để nhận SSL miễn phí.
+
+### Bước 2: Chuẩn bị Hosting SmarterASP.NET
+1. Vào mục Websites trong Control Panel của SmarterASP.NET.
+2. Mở cấu hình Domain Bindings (Pointers) và thêm tên miền `huyz4nny.xyz` vào.
+3. Chắc chắn rằng tùy chọn **"Security Lock"** đã được tắt để mở public truy cập.
+
+### Bước 3: Thiết lập CI/CD (GitHub Auto Deploy)
+SmarterASP.NET có khả năng tự động đọc file `.csproj` và tiến hành biên dịch (build) dự án .NET.
+
+1. Tại Control Panel của trang web, chọn tính năng **Deploy from GitHub**.
+2. Kết nối với repo `vcStudyNote` nhánh `main`.
+3. Bấm **Deploy**. Lúc này, kịch bản triển khai phía sau sẽ diễn ra như sau:
+   - Hệ thống tải source code về.
+   - Quét thấy thư mục `StudyNote.API/` có chứa project `.NET 10`.
+   - MSBuild chạy lệnh `dotnet publish`.
+   - **Đặc biệt:** Trong file `StudyNote.API.csproj`, đã có cấu hình tự động gom (copy) toàn bộ thư mục `studynote-web/` (Frontend) vào chung thư mục `wwwroot/` của bản Build.
+   - ASP.NET Core sẽ khởi động, mở API tại `huyz4nny.xyz/api/...` và phục vụ giao diện Web ngay tại trang gốc `huyz4nny.xyz/`. Swagger được chuyển sang `huyz4nny.xyz/swagger`.
+
+> 💡 **Kết quả:** Mọi thay đổi bạn Push lên GitHub nhánh Main, chỉ cần vào Hosting bấm Deploy lại là hệ thống tự động cập nhật cả Frontend lẫn Backend!
 
 ---
 
-## 🚀 Hướng dẫn Cài đặt & Chạy dưới Local
+## 💻 Hướng dẫn Chạy Local (Môi trường Phát triển)
 
-Dự án không cần cài đặt môi trường phức tạp (không NodeJS, không npm). Bạn có thể chạy theo 2 cách cực kỳ đơn giản:
+Để chạy dự án ngay trên máy tính cá nhân của bạn để lập trình:
 
-### Cách 1: Chạy trực tiếp qua trình duyệt
+### 1. Yêu cầu hệ thống
+- Tải và cài đặt [.NET 10 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
+- Git.
+
+### 2. Khởi động hệ thống (Chỉ cần 1 bước duy nhất)
+
+Mở Terminal / Command Prompt:
+
 ```bash
+# 1. Clone dự án về máy
 git clone https://github.com/huyz4nny/vcStudyNote.git
-cd vcStudyNote/studynote-web
-# Bấm đúp vào file index.html để trải nghiệm ngay
+cd vcStudyNote/StudyNote.API
+
+# 2. Khởi động Backend (Tự động tạo database SQLite ở lần đầu tiên)
+dotnet run
 ```
 
-### Cách 2: Chạy qua Live Server (Khuyên dùng cho Developer)
-Mở dự án bằng Visual Studio Code, sử dụng extension **Live Server** hoặc dùng các công cụ HTTP Server tích hợp sẵn:
-```bash
-cd vcStudyNote/studynote-web
-# Nếu dùng Node.js
-npx serve . 
+Hệ thống sẽ chạy tại địa chỉ: `http://localhost:5000`
 
-# Nếu dùng Python
-python -m http.server 8000
-```
-Truy cập: `http://localhost:8000`
-
----
-
-## 🗺️ Lộ trình Phát triển (Roadmap)
-
-Trong tương lai gần, StudyNote sẽ được nâng cấp từ một trang web tĩnh thành một **Hệ thống phần mềm Fullstack hoàn chỉnh** (chi tiết xem tại [`StudyNote_ProjectPlan.md`](./StudyNote_ProjectPlan.md)):
-
-- [ ] **Xây dựng Backend:** Chuyển đổi sang **ASP.NET Core 8 (Web API)** theo mô hình MVC hoặc Clean Architecture.
-- [ ] **Thiết kế Database:** Sử dụng **Entity Framework Core** kết nối với hệ quản trị cơ sở dữ liệu **Microsoft SQL Server**.
-- [ ] **Bảo mật:** Tích hợp **ASP.NET Core Identity** kết hợp với **JWT Token** để quản lý phiên đăng nhập thực tế.
-- [ ] **Tính năng nâng cao:**
-  - Đồng bộ dữ liệu theo thời gian thực (Cloud Sync).
-  - Gửi email thông báo nhắc nhở deadline tự động.
-  - Hỗ trợ Markdown đầy đủ cho phần Ghi chú.
-  - Tự động xuất lịch học & kết quả ra PDF/Word.
+- **Để lập trình Frontend:** Mở file `studynote-web/index.html` bằng tiện ích **Live Server** trên VS Code (thường chạy ở port 5500). Hệ thống JS đã được lập trình sẵn để tự động phát hiện môi trường Local và kết nối chéo sang API ở cổng 5000 cực kỳ thông minh.
+- **Để test API (Backend):** Mở trình duyệt truy cập vào `http://localhost:5000/swagger`.
 
 ---
 
