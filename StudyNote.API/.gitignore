@@ -1,0 +1,17 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## Database local (không commit file db lên GitHub)
+*.db
+*.db-shm
+*.db-wal
+
+## Logs
+*.log
+
+## Build output
+publish/
